@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import autoTable, { UserOptions } from "jspdf-autotable";
-
+import QRCode from "qrcode"; 
 interface TicketData {
   bookingId: string;
   eventTitle: string;
@@ -10,7 +10,6 @@ interface TicketData {
   bookingDate: string;
 }
 
-// 💡 any လုံးဝမပါဘဲ jspdf-autotable ရဲ့ အတွင်းပိုင်း properties များကို Type အသေအချာ သတ်မှတ်ခြင်း
 interface ExtendedTableProperties {
   finalY: number;
 }
@@ -18,17 +17,18 @@ interface ExtendedTableProperties {
 interface SafeJsPDF extends jsPDF {
   setLineDash: (segments: number[], offset: number) => jsPDF;
   autoTable: (options: UserOptions) => void;
-  lastAutoTable?: ExtendedTableProperties; // 👈 any မသုံးဘဲ Optional သတ်မှတ်ထားပါတယ်
+  lastAutoTable?: ExtendedTableProperties;
 }
 
-export const generateTicketPDF = (data: TicketData): void => {
+// 💡 ၂။ QRCode ထုတ်လုပ်ခြင်းက Async ဖြစ်လို့ Function ကို async ပြောင်းပေးရပါမယ်
+export const generateTicketPDF = async (data: TicketData): Promise<void> => {
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a6",
   }) as SafeJsPDF;
 
-  // Turbopack / Next.js Runtime အမှားအတွက် Plugin ကို Type-safe အတိုင်း တွဲပေးခြင်း
+  // Turbopack / Next.js Runtime အမှားအတွက် Plugin ကို တွဲပေးခြင်း
   if (typeof doc.autoTable !== "function") {
     doc.autoTable = function (options: UserOptions): void {
       autoTable(this, options);
@@ -56,7 +56,7 @@ export const generateTicketPDF = (data: TicketData): void => {
   doc.setTextColor(lightTextColor);
   doc.text("Official Entry Ticket & Receipt", 10, 20);
 
-  // Dashed Line ဆွဲခြင်း (Type-safe)
+  // Dashed Line ဆွဲခြင်း
   doc.setDrawColor(228, 228, 231); 
   doc.setLineDash([2, 2], 0); 
   doc.line(10, 25, 95, 25);
@@ -95,11 +95,10 @@ export const generateTicketPDF = (data: TicketData): void => {
     }
   });
 
-  // Total Amount Due Section
-  // 💡 Safe Optional Chaining သုံးထားလို့ any မလိုဘဲ အလုပ်လုပ်ပါတယ်၊ မရှိရင် 70mm ကို Fallback ယူပါတယ်
   const finalY = doc.lastAutoTable?.finalY ?? 70;
   const contentY = finalY + 4;
   
+  // Total Amount Due Section
   doc.setFillColor(244, 244, 245); 
   doc.rect(10, contentY, 85, 12, "F");
 
@@ -113,12 +112,48 @@ export const generateTicketPDF = (data: TicketData): void => {
   doc.setTextColor(brandColor);
   doc.text(amountString, 91, contentY + 7.5, { align: "right" });
 
-  // Footer / Note
-  doc.setFont("Helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(lightTextColor);
-  doc.text("Thank you for your purchase!", 52.5, contentY + 22, { align: "center" });
-  doc.text("Please show this PDF at the entrance gate.", 52.5, contentY + 26, { align: "center" });
+  // ==========================================
+  // 💡 ၃။ QR CODE GENERATION & INTEGRATION
+  // ==========================================
+  try {
+    // ဝင်ပေါက်က ကောင်တာမှာ Scan ဖတ်ရင် သိစေချင်တဲ့ အချက်အလက် (ဥပမာ- Booking ID စစ်စစ်) ကို ထည့်ပါမယ်
+    const qrValue = `TICKETGO-VALIDATION:${data.bookingId}`;
+    
+    // QR Code ကို Base64 Image URL အဖြစ် ပြောင်းလဲခြင်း
+    const qrDataUrl = await QRCode.toDataURL(qrValue, {
+      margin: 1,
+      width: 120,
+      color: {
+        dark: "#18181b",  // Zinc 900
+        light: "#ffffff", // Background အဖြူ
+      },
+    });
+
+    // PDF စာမျက်နှာအလယ်မှာ 28mm x 28mm အရွယ်အစားနဲ့ QR Code ပုံ ထည့်ခြင်း
+    const qrSize = 28;
+    const qrX = (105 - qrSize) / 2; // A6 width (105mm) ရဲ့ အလယ်တည့်တည့် တွက်ချက်ခြင်း
+    const qrY = contentY + 16;      // စုစုပေါင်း ကျသင့်ငွေ ဘားရဲ့ အောက်နားမှာ ကပ်ရက်နေရာချခြင်း
+
+    doc.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize);
+
+    // Footer / Note တွေကို QR Code ရဲ့ အောက်ဘက်သို့ ရွှေ့ပေးလိုက်ပါတယ်
+    const footerY = qrY + qrSize + 6;
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(lightTextColor);
+    doc.text("Thank you for your purchase!", 52.5, footerY, { align: "center" });
+    doc.text("Please show this QR Code at the entrance gate.", 52.5, footerY + 4, { align: "center" });
+
+  } catch (qrError) {
+    console.error("Failed to generate QR code for PDF:", qrError);
+    // တကယ်လို့ QR code ထုတ်တာ တစ်ခုခုမှားခဲ့ရင် အရင်အတိုင်း စာသားပဲ ဖော်ပြပေးဖို့ Fallback ရေးထားပါတယ်
+    const footerY = contentY + 22;
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(lightTextColor);
+    doc.text("Thank you for your purchase!", 52.5, footerY, { align: "center" });
+    doc.text("Please show this PDF at the entrance gate.", 52.5, footerY + 4, { align: "center" });
+  }
 
   // Save the PDF
   doc.save(`TicketGo-${data.bookingId.slice(-6).toUpperCase()}.pdf`);
