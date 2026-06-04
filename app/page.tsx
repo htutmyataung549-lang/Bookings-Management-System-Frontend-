@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CalendarDays, Ticket, Coins, Search, ArrowRight, ChevronDown } from "lucide-react"; // ✅ Icon လေးတွေ သုံးဖို့ ထည့်ထားပါတယ်
+import SkeletonCard from "./components/skeleton";
 
 interface Event {
   id: string;
@@ -96,13 +97,12 @@ export default function Home() {
 
       {/* Events Grid */}
       {loading ? (
-        <div className="text-center py-24 text-muted-foreground animate-pulse">Loading amazing events...</div>
+        [...Array(6)].map((_,index) => <SkeletonCard key={index} />)
       ) : filteredEvents.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">No events match your search.</div>
       ) : (
         <div className="space-y-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* 💡 ၄။ ၆ ခုပဲ ဖြတ်ထားတဲ့ slicedEvents ကို ပတ်ပြခြင်း */}
             {slicedEvents.map((event: Event) => (
               <Card
                 key={event.id}
