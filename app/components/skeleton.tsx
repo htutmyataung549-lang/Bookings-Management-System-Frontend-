@@ -3,7 +3,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SkeletonCard() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
       <Card className="flex flex-col justify-between overflow-hidden border-zinc-200/80 dark:border-zinc-800 shadow-2xs bg-card">
         <CardHeader className="pb-3">
           {/* Title နှင့် Badge Skeleton */}
@@ -28,6 +27,5 @@ export default function SkeletonCard() {
           <Skeleton className="h-10 w-full rounded-md" />
         </CardFooter>
       </Card>
-    </div>
   );
 }
