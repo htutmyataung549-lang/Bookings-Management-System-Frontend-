@@ -3,6 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SkeletonCard() {
   return (
+    <div>
       <Card className="flex flex-col justify-between overflow-hidden border-zinc-200/80 dark:border-zinc-800 shadow-2xs bg-card">
         <CardHeader className="pb-3">
           {/* Title နှင့် Badge Skeleton */}
@@ -27,5 +28,6 @@ export default function SkeletonCard() {
           <Skeleton className="h-10 w-full rounded-md" />
         </CardFooter>
       </Card>
+    </div>
   );
 }
