@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
-const BACKEND_URL = "http://localhost:8080/api";
-
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://bookings-management-system.onrender.com/api';
 // export async function GET(request: Request) {
 //     const {searchParams} = new URL(request.url);
 //     const endpoint = searchParams.get("endpoint");
