@@ -248,14 +248,12 @@ function BookingFormContent() {
 
   return (
     <div className="space-y-4">
-      {/* ✅ ၄။ Loading မဟုတ်ဘူး၊ Sold Out လည်း မဟုတ်ဘူး၊ အချိန်လည်း မပြည့်သေးရင် Timer ဘားလေးကို အပေါ်ကနေ ပြသခြင်း */}
       {!pageLoading && !isSoldOut && !isTimeOut && (
         <div className="animate-in fade-in slide-in-from-top-2 duration-300">
           <BookingTimer initialSeconds={10 * 60} onTimeOut={handleTimeout} />
         </div>
       )}
 
-      {/* ✅ ၅။ အချိန်ကုန်သွားပါက Form တစ်ခုလုံးကို မှိုင်းချပြီး နှိပ်၍မရအောင် pointer-events-none နှင့် ထိန်းချုပ်ခြင်း */}
       <Card
         className={`relative overflow-hidden border-zinc-200/80 shadow-lg dark:border-zinc-800 transition-all duration-300 ${
           isTimeOut ? "opacity-60 pointer-events-none select-none" : ""
@@ -281,7 +279,6 @@ function BookingFormContent() {
         </CardHeader>
 
         <CardContent className="pt-6 space-y-5">
-          {/* ✅ ၆။ အချိန်ပြည့်သွားလျှင် Card တွင်း၌ ပြသမည့် Expired Message */}
           {isTimeOut ? (
             <div className="text-center py-6 px-4 text-destructive font-semibold bg-destructive/10 border border-destructive/20 rounded-xl space-y-1 animate-in fade-in zoom-in-95">
               <div>⚠️ Hold Session Expired</div>
@@ -368,7 +365,6 @@ function BookingFormContent() {
         </CardContent>
 
         <CardFooter className="pb-6 pt-2">
-          {/* ✅ ၇။ အချိန်ပြည့်သွားပါက ခလုတ်ကို စာမျက်နှာ Reload လုပ်မည့် ခလုတ်အဖြစ် ပြောင်းလဲပေးခြင်း */}
           {isTimeOut ? (
             <Button
               type="button"

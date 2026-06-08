@@ -1,12 +1,3 @@
-// export default function MyBookings() {
-//     return (
-//         <div className="p-8 max-w-6xl mx-auto space-y-6">
-//             <h1 className="text-3xl font-bold text-emerald-600">My Bookings</h1>
-//             {/* Booking list will go here */}
-//         </div>
-//     );
-// }
-
 "use client";
 
 import { useState } from "react";
@@ -50,6 +41,7 @@ export default function MyBookingsPage() {
       `/api/backend?endpoint=booking/user&customerName=${searchName}`
     );
     const result = await res.json();
+    console.log("🔥 Frontend Recieved Result:", result);
 
     if (result.status === "Success") {
       setBookings(result.data);
@@ -83,13 +75,14 @@ export default function MyBookingsPage() {
               className="text-base"
             />
             <Button
-              onClick={handleSearch}className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={handleSearch}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               Search
             </Button>
           </div>
 
-          {/* Details ပြသပေးမည့် Table */}
+          {/* Details  Table */}
           {hasSearched && bookings.length > 0 ? (
             <div className="border rounded-lg overflow-hidden">
               <Table>
@@ -117,8 +110,17 @@ export default function MyBookingsPage() {
                           ? `${booking.totalAmount.toLocaleString()} MMK`
                           : "0 MMK"}
                       </TableCell>
-                      <TableCell className="text-right text-muted-foreground text-sm">
-                        {new Date(booking.bookingDate).toLocaleString()}
+                      <TableCell
+                        className="text-right text-muted-foreground text-sm"
+                        suppressHydrationWarning
+                      >
+                        {booking.bookingDate
+                          ? new Date(
+                              booking.bookingDate.endsWith("Z")
+                                ? booking.bookingDate
+                                : booking.bookingDate + "Z"
+                            ).toLocaleString()
+                          : "-"}
                       </TableCell>
                     </TableRow>
                   ))}
