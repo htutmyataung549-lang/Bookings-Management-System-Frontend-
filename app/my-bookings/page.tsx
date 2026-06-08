@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Card,
@@ -34,6 +34,17 @@ export default function MyBookingsPage() {
   const [searchName, setSearchName] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    },300);
+    return () => {
+      clearTimeout(handler);
+    }
+  },[query]);
 
   const handleSearch = async () => {
     if (!searchName.trim()) return;

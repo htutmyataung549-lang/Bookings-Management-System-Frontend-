@@ -28,27 +28,16 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [visibleCount, setVisibleCount] = useState(6);
   const [wakingUpMessage, setWakingUpMessage] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  // useEffect(() => {
-  //   const fetchEvents = async () => {
-  //     setLoading(true);
-  //     try {
-  //       const res = await fetch("/api/backend?endpoint=events");
-  //       const resData = await res.json();
-  //       if (resData && res.status === 200 && Array.isArray(resData.data)) {
-  //         console.log("Valid events data:", resData);
-  //         setEvents(resData.data);
-  //       } else {
-  //         console.error("Invalid events data:", resData);
-  //       }
-  //     } catch (error) {
-  //       console.error("Error fetching events:", error);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-  //   fetchEvents();
-  // }, []);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    },300);
+    return () => {
+      clearTimeout(handler);
+    }
+  },[query]);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -94,7 +83,7 @@ export default function Home() {
 
   // Filter events based on search query
   const filteredEvents = events.filter((event: Event) =>
-    event.title.toLowerCase().includes(query.toLowerCase())
+    event.title.toLowerCase().includes(debouncedQuery.toLowerCase())
   );
 
   const slicedEvents = filteredEvents.slice(0, visibleCount);
@@ -147,6 +136,18 @@ export default function Home() {
           <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
             Upcoming Live Shows
           </h2>
+
+          {/*Server Waking Up Alert box */}
+          {wakingUpMessage && !loading && (
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl text-amber-800 dark:text-amber-300 text-sm flex items-center gap-3 animate-pulse">
+              <span className="text-base">⏳</span>
+              <div>
+                <span className="font-semibold">Note:</span> {wakingUpMessage}{" "}
+                Our free server takes about 30-50 seconds to spin up if it has
+                been inactive. Thank you for your patience!
+              </div>
+            </div>
+          )}
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, index) => (
