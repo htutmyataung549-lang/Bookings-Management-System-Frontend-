@@ -77,7 +77,7 @@ export default function MyBookingsPage() {
       setBookings([]);
     } finally {
       setHasSearched(true);
-      setStatusFilter("All"); // 💡 နာမည်အသစ်ရှာတိုင်း Filter ကို All ပြန်ပြောင်းပေးခြင်း
+      setStatusFilter("All"); 
     }
   };
 

@@ -1,10 +1,11 @@
 "use client";
-import { Button } from "@/components/ui/button";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge"; // 💡 Count Badge အတွက် ထည့်သွင်းခြင်း
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Search, ChevronDown } from "lucide-react";
+import { Search, ChevronDown, CalendarX } from "lucide-react"; // 💡 Empty State အတွက် Icon အသစ်
 import SkeletonCard from "./components/skeleton";
 import { EventCard } from "./components/EventCard";
 import { FooterSection } from "./components/footer-section";
@@ -12,6 +13,7 @@ import { CtaBanner } from "./components/cta-banner";
 import { FeaturesSection } from "./components/features-section";
 import { VenuesSection } from "./components/venues-section";
 import { FaqSection } from "./components/faq-question";
+import { EventCarousel } from "./components/EventCarousel";
 
 interface Event {
   id: string;
@@ -33,35 +35,43 @@ export default function Home() {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedQuery(query);
-    },300);
+    }, 300);
     return () => {
       clearTimeout(handler);
-    }
-  },[query]);
+    };
+  }, [query]);
 
   useEffect(() => {
     const fetchEvents = async () => {
       setLoading(true);
-      // setWakingUpMessage("Server is waking up from its nap...");
       try {
         const res = await fetch("/api/backend?endpoint=events");
         const resData = await res.json();
         console.log(resData);
 
         if (res.status === 200) {
-          //  Backend data is  { data: [...] }
           if (resData && Array.isArray(resData.data)) {
             console.log("Valid format with data key:", resData.data);
-            setEvents(resData.data);
+
+            // 💡 ၁။ ရက်စွဲအနီးဆုံးပွဲများကို အပေါ်ဆုံးသို့ ရောက်အောင် Sort စီပေးခြင်း
+            const sortedData = resData.data.sort(
+              (a: Event, b: Event) =>
+                new Date(a.eventDate).getTime() -
+                new Date(b.eventDate).getTime()
+            );
+            setEvents(sortedData);
           } else if (Array.isArray(resData)) {
             console.log("Valid format as direct array:", resData);
-            setEvents(resData);
+
+            const sortedData = resData.sort(
+              (a: Event, b: Event) =>
+                new Date(a.eventDate).getTime() -
+                new Date(b.eventDate).getTime()
+            );
+            setEvents(sortedData);
           } else {
-            // console.warn(
-            //   "Received empty or mismatch object ({}), falling back safely to empty array."
-            // );
             if (resData.message) {
-              setWakingUpMessage(resData.message); // "Server is waking up..."
+              setWakingUpMessage(resData.message);
             }
             setEvents([]);
           }
@@ -82,10 +92,21 @@ export default function Home() {
     fetchEvents();
   }, []);
 
-  // Filter events based on search query
-  const filteredEvents = events.filter((event: Event) =>
-    event.title.toLowerCase().includes(debouncedQuery.toLowerCase())
-  );
+  // 💡 ၂။ Search Query ရော ယနေ့ရက်စွဲပါ ကိုက်ညီမှ (Upcoming Events သာ) စစ်ထုတ်ပြသခြင်း
+  const filteredEvents = events.filter((event: Event) => {
+    const matchesQuery = event.title
+      .toLowerCase()
+      .includes(debouncedQuery.toLowerCase());
+
+    const eventDate = new Date(event.eventDate);
+    const now = new Date();
+    eventDate.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+
+    const isUpcoming = eventDate >= now;
+
+    return matchesQuery && isUpcoming;
+  });
 
   const slicedEvents = filteredEvents.slice(0, visibleCount);
 
@@ -95,7 +116,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="p-6 md:p-12 max-w-6xl mx-auto space-y-12 animate-in fade-in duration-300">
+      <main className="p-6 md:p-12 max-w-6xl mx-auto space-y-8 animate-in fade-in duration-300">
         {/* Top Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6 border-zinc-100 dark:border-zinc-800">
           <div className="space-y-1">
@@ -132,13 +153,37 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Banner Carousel */}
+        <EventCarousel />
+
         {/* Events Grid */}
         <div className="space-y-6">
-          <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            Upcoming Live Shows
-          </h2>
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              Upcoming Live Shows
+            </h2>
+            {/* 💡 Live Booking Indicator with Animated Ping Effect */}
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                Live Booking
+              </span>
+            </div>
+            {!loading && filteredEvents.length > 0 && (
+              <Badge
+                variant="secondary"
+                className="rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 font-medium"
+              >
+                {filteredEvents.length}{" "}
+                {filteredEvents.length === 1 ? "Show" : "Shows"}
+              </Badge>
+            )}
+          </div>
 
-          {/*Server Waking Up Alert box */}
+          {/* Server Waking Up Alert box */}
           {wakingUpMessage && !loading && (
             <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl text-amber-800 dark:text-amber-300 text-sm flex items-center gap-3 animate-pulse">
               <span className="text-base">⏳</span>
@@ -149,6 +194,7 @@ export default function Home() {
               </div>
             </div>
           )}
+
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, index) => (
@@ -156,8 +202,26 @@ export default function Home() {
               ))}
             </div>
           ) : filteredEvents.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              No events match your search.
+            <div className="flex flex-col items-center justify-center text-center py-20 border border-dashed rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/10 animate-in fade-in duration-200">
+              <div className="p-3.5 bg-zinc-100 dark:bg-zinc-800 rounded-full text-zinc-400 mb-4">
+                <CalendarX className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                No events found
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-xs mt-1">
+                {query ? (
+                  <span>
+                    We couldn&apos;t find any live shows matching &ldquo;
+                    <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                      {query}
+                    </span>
+                    &rdquo;.
+                  </span>
+                ) : (
+                  "There are currently no upcoming shows scheduled. Please check back later!"
+                )}
+              </p>
             </div>
           ) : (
             <div className="space-y-10">
@@ -182,13 +246,11 @@ export default function Home() {
             </div>
           )}
         </div>
-        {/* 💡 SECTION NEW  Brand Trust Value Propositions */}
+
+        {/* Features, Venues, CTA, FAQ Sections */}
         <FeaturesSection />
-        {/* 💡 SECTION NEW: Popular Venues Section */}
         <VenuesSection />
-        {/* 💡 SECTION NEW Conversion Driven Organizer CTA */}
         <CtaBanner />
-        {/* 💡 SECTION NEW: Frequently Asked Questions */}
         <FaqSection />
       </main>
       <FooterSection />
