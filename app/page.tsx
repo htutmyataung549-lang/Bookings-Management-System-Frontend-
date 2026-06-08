@@ -42,6 +42,7 @@ export default function Home() {
   useEffect(() => {
     const fetchEvents = async () => {
       setLoading(true);
+      // setWakingUpMessage("Server is waking up from its nap...");
       try {
         const res = await fetch("/api/backend?endpoint=events");
         const resData = await res.json();

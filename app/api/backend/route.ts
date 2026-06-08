@@ -50,7 +50,7 @@ export async function GET(request: Request) {
     }
 
     const data = await response.json();
-    console.log("🎯 Backend Data Recieved: ", data);
+    // console.log("🎯 Backend Data Recieved: ", data);
 
     if (Array.isArray(data)) {
       return NextResponse.json({ data: data });

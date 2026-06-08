@@ -158,7 +158,7 @@ function BookingFormContent() {
     }
   };
 
-  const currentPrice = event ? event.ticketPrice : urlTicketPrice ?? 0;
+  const currentPrice = event?.ticketPrice ?? urlTicketPrice ?? 0;
   const displayEventTitle = event ? event.title : urlEventName;
   const availableTickets = event ? event.availableTickets : 0;
   const isSoldOut = event !== null && availableTickets <= 0;
@@ -221,7 +221,7 @@ function BookingFormContent() {
             onClick={async () => {
               const toastId = toast.loading("Generating PDF Ticket...");
               try {
-                await generateTicketPDF(successData); 
+                await generateTicketPDF(successData);
                 toast.success("Ticket downloaded successfully!", {
                   id: toastId,
                 });
@@ -344,9 +344,11 @@ function BookingFormContent() {
                 <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
                   <span>Original Price</span>
                   <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                    {event || urlTicketPrice
-                      ? `${currentPrice.toLocaleString()} MMK`
-                      : "--- MMK"}
+                    <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                      {currentPrice > 0
+                        ? `${currentPrice.toLocaleString()} MMK`
+                        : "--- MMK"}
+                    </span>
                   </span>
                 </div>
                 <div className="flex justify-between items-center font-semibold text-zinc-900 border-t border-zinc-200/60 pt-2.5 mt-1 dark:text-zinc-100 dark:border-zinc-800">
@@ -354,7 +356,7 @@ function BookingFormContent() {
                     Total Amount Due
                   </span>
                   <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">
-                    {event || urlTicketPrice
+                    {currentPrice > 0
                       ? `${(currentPrice * quantity).toLocaleString()} MMK`
                       : "--- MMK"}
                   </span>
