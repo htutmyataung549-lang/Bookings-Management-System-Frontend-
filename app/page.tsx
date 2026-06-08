@@ -10,6 +10,7 @@ import {
 } from "lucide-react"; 
 import SkeletonCard from "./components/skeleton";
 import { EventCard } from "./components/EventCard";
+// import { FooterSection } from "./components/footer-section";
 
 interface Event {
   id: string;
@@ -212,6 +213,8 @@ export default function Home() {
           )}
         </div>
       )}
+
+      {/* <FooterSection/> */}
     </div>
   );
 }

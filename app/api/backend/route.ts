@@ -1,84 +1,92 @@
 import { NextResponse } from "next/server";
 
+// Environment Variable သုံးထားခြင်းက အလွန်ကောင်းမွန်ပါသည်။ Fallback အတွက် Render URL ထည့်ထားပေးသည်။
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://bookings-management-system.onrender.com/api';
-// export async function GET(request: Request) {
-//     const {searchParams} = new URL(request.url);
-//     const endpoint = searchParams.get("endpoint");
-//     const customerName = searchParams.get("customerName");
 
-//     if (!endpoint) {
-//         return NextResponse.json({error: "Endpoint query parameter is required"}, {status: 400});
-//     }
 
-//     let url = `${BACKEND_URL}/${endpoint}`;
-//     if (customerName) {
-//         url += `?customerName=${encodeURIComponent(customerName)}`;
-//     }
+function buildBackendUrl(requestUrl: string): { url: string; error?: string } {
+  const { searchParams } = new URL(requestUrl);
+  const endpoint = searchParams.get("endpoint");
 
-//     try {
-//         const response = await fetch(url , {cache: "no-cache"});
-//         const data = await response.json();
-//         // console.log("Data fetched from backend:", data);
-//         // return new Response(JSON.stringify(data), {status: 200});
-//         return NextResponse.json(data);
-//     } catch (error) {
-//         console.error("Error fetching data from backend:", error);
-//         return NextResponse.json({error: "Error fetching data from backend"}, {status: 500});
-//     }
-// }
+  if (!endpoint) {
+    return { url: "", error: "Endpoint query parameter is required" };
+  }
 
-export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const endpoint = searchParams.get("endpoint");
+  // endpoint ကို ဖယ်ထုတ်ပြီး ကျန်သော query params များကို dynamic parameter အဖြစ် ယူခြင်း
+  const backendParams = new URLSearchParams(searchParams.toString());
+  backendParams.delete("endpoint");
 
-    if (!endpoint) {
-        return NextResponse.json({ error: "Endpoint query parameter is required" }, { status: 400 });
-    }
-
-    const backendParams = new URLSearchParams(searchParams.toString());
-    backendParams.delete("endpoint");
-
-    const queryString = backendParams.toString();
-    const url = queryString ? `${BACKEND_URL}/${endpoint}?${queryString}` : `${BACKEND_URL}/${endpoint}`;
-
-    try {
-        const response = await fetch(url, { cache: "no-cache" });
-        const data = await response.json();
-        return NextResponse.json(data);
-    } catch (error) {
-        console.error("Error fetching data from backend:", error);
-        return NextResponse.json({ error: "Error fetching data from backend" }, { status: 500 });
-    }
+  const queryString = backendParams.toString();
+  const finalUrl = queryString ? `${BACKEND_URL}/${endpoint}?${queryString}` : `${BACKEND_URL}/${endpoint}`;
+  
+  return { url: finalUrl };
 }
 
+// ==========================================
+// GET METHOD PROXY
+// ==========================================
+export async function GET(request: Request) {
+  const { url, error } = buildBackendUrl(request.url);
+
+  if (error) {
+    return NextResponse.json({ error }, { status: 400 });
+  }
+
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    
+    // Response Error Handling
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: `Backend responded with status: ${response.status}` }, 
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error fetching data from backend:", msg);
+    return NextResponse.json({ error: "Error fetching data from backend" }, { status: 500 });
+  }
+}
+
+// ==========================================
+//  POST METHOD PROXY
+// ==========================================
 export async function POST(request: Request) {
-    const {searchParams} = new URL(request.url);
-    const endpoint = searchParams.get("endpoint");
-    const customerName = searchParams.get("customerName");
+  const { url, error } = buildBackendUrl(request.url);
+
+  if (error) {
+    return NextResponse.json({ error }, { status: 400 });
+  }
+
+  try {
     const body = await request.json();
 
-    if (!endpoint) {
-        return NextResponse.json({error: "Endpoint query parameter is required"}, {status: 400});
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body),
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: `Backend POST failed with status: ${response.status}` }, 
+        { status: response.status }
+      );
     }
 
-    let url = `${BACKEND_URL}/${endpoint}`;
-    if (customerName) {
-        url += `?customerName=${encodeURIComponent(customerName)}`;
-    }
-
-    try {
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(body)
-        });
-        const data = await response.json();
-        console.log("Data posted to backend:", data);
-        return NextResponse.json(data);
-    } catch (error) {
-        console.error("Error posting data to backend:", error);
-        return NextResponse.json({error: "Error posting data to backend"}, {status: 500});
-    }
+    const data = await response.json();
+    console.log("Data successfully posted to backend:", data);
+    return NextResponse.json(data);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error posting data to backend:", msg);
+    return NextResponse.json({ error: "Error posting data to backend" }, { status: 500 });
+  }
 }
