@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge"; // 💡 Count Badge အတွက် ထည့်သွင်းခြင်း
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Search, ChevronDown, CalendarX } from "lucide-react"; // 💡 Empty State အတွက် Icon အသစ်
+import { Search, ChevronDown, CalendarX, LayoutGrid, List } from "lucide-react"; // 💡 Empty State အတွက် Icon အသစ်
 import SkeletonCard from "./components/skeleton";
 import { EventCard } from "./components/EventCard";
 import { FooterSection } from "./components/footer-section";
@@ -14,6 +14,7 @@ import { FeaturesSection } from "./components/features-section";
 import { VenuesSection } from "./components/venues-section";
 import { FaqSection } from "./components/faq-question";
 import { EventCarousel } from "./components/EventCarousel";
+import { BackToTop } from "./components/BackToTop";
 
 interface Event {
   id: string;
@@ -31,6 +32,7 @@ export default function Home() {
   const [visibleCount, setVisibleCount] = useState(6);
   const [wakingUpMessage, setWakingUpMessage] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -44,14 +46,25 @@ export default function Home() {
   useEffect(() => {
     const fetchEvents = async () => {
       setLoading(true);
+      setWakingUpMessage(""); // Reset message on new fetch
+
+      // 💡 ၅ စက္ကန့်အတွင်း API က data မကျလာရင် Server အိပ်ပျော်နေတယ်လို့ ယူဆပြီး message ကို ကြိုပြထားမယ်
+      const wakingTimeout = setTimeout(() => {
+        setWakingUpMessage(
+          "Our free server takes about 30-50 seconds to spin up if it has been inactive. Thank you for your patience!"
+        );
+      }, 5000);
       try {
         const res = await fetch("/api/backend?endpoint=events");
         const resData = await res.json();
         console.log(resData);
 
+        clearTimeout(wakingTimeout);
+        setWakingUpMessage("");
+
         if (res.status === 200) {
           if (resData && Array.isArray(resData.data)) {
-            console.log("Valid format with data key:", resData.data);
+            // console.log("Valid format with data key:", resData.data);
 
             // 💡 ၁။ ရက်စွဲအနီးဆုံးပွဲများကို အပေါ်ဆုံးသို့ ရောက်အောင် Sort စီပေးခြင်း
             const sortedData = resData.data.sort(
@@ -172,6 +185,31 @@ export default function Home() {
                 Live Booking
               </span>
             </div>
+
+            {/* 💡 View Toggle Buttons */}
+            <div className="flex items-center border border-zinc-200 dark:border-zinc-800 rounded-xl p-0.5 bg-zinc-50 dark:bg-zinc-900">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-1.5 rounded-lg transition-all ${
+                  viewMode === "grid"
+                    ? "bg-white dark:bg-zinc-800 shadow-2xs text-emerald-600"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-1.5 rounded-lg transition-all ${
+                  viewMode === "list"
+                    ? "bg-white dark:bg-zinc-800 shadow-2xs text-emerald-600"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+
             {!loading && filteredEvents.length > 0 && (
               <Badge
                 variant="secondary"
@@ -184,17 +222,14 @@ export default function Home() {
           </div>
 
           {/* Server Waking Up Alert box */}
-          {wakingUpMessage && !loading && (
+          {wakingUpMessage && (
             <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl text-amber-800 dark:text-amber-300 text-sm flex items-center gap-3 animate-pulse">
               <span className="text-base">⏳</span>
               <div>
-                <span className="font-semibold">Note:</span> {wakingUpMessage}{" "}
-                Our free server takes about 30-50 seconds to spin up if it has
-                been inactive. Thank you for your patience!
+                <span className="font-semibold">Note:</span> {wakingUpMessage}
               </div>
             </div>
           )}
-
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, index) => (
@@ -206,9 +241,12 @@ export default function Home() {
               <div className="p-3.5 bg-zinc-100 dark:bg-zinc-800 rounded-full text-zinc-400 mb-4">
                 <CalendarX className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                 No events found
               </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Try adjusting your search or filters.
+              </p>
               <p className="text-sm text-muted-foreground max-w-xs mt-1">
                 {query ? (
                   <span>
@@ -225,7 +263,13 @@ export default function Home() {
             </div>
           ) : (
             <div className="space-y-10">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                    : "flex flex-col gap-4 max-w-3xl mx-auto"
+                }
+              >
                 {slicedEvents.map((event: Event) => (
                   <EventCard event={event} key={event.id} />
                 ))}
@@ -252,6 +296,7 @@ export default function Home() {
         <VenuesSection />
         <CtaBanner />
         <FaqSection />
+        <BackToTop />
       </main>
       <FooterSection />
     </div>

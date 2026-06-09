@@ -63,7 +63,10 @@ const FEATURED_EVENTS = [
       "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?w=1200&auto=format&fit=crop&q=80",
     tag: "Popular",
   },
+
 ];
+
+// https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=500
 
 export function EventCarousel() {
   const plugin = React.useRef(

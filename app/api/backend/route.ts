@@ -24,6 +24,7 @@ function buildBackendUrl(requestUrl: string): { url: string; error?: string } {
 // GET METHOD PROXY (Render Free Tier)
 // ==========================================
 export async function GET(request: Request) {
+  // await new Promise((resolve) => setTimeout(resolve, 8000));
   const { url, error } = buildBackendUrl(request.url);
 
   if (error) {
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
       return NextResponse.json(data);
     }
 
-    return NextResponse.json({ data: [] });
+    return NextResponse.json(data);
 
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";

@@ -38,10 +38,12 @@ interface BookingResult {
 
 interface Event {
   id: string;
-  title: string;
+  title?: string;
+  name?: string; // fallback field
   eventDate: string;
   totalTickets: number;
-  availableTickets: number;
+  availableTickets?: number;
+  available_tickets?: number; // snake_case fallback
   ticketPrice: number;
 }
 
@@ -59,18 +61,28 @@ function BookingFormContent() {
     ? Number(searchParams.get("price"))
     : null;
 
+  const urlQuantity = searchParams.get("quantity")
+    ? Number(searchParams.get("quantity"))
+    : 1;
+
   const [event, setEvent] = useState<Event | null>(null);
   const [customerName, setCustomerName] = useState("");
-  const [quantity, setQuantity] = useState(1);
+
+  const [quantity, setQuantity] = useState(urlQuantity);
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
 
-  // Success State & Data သိမ်းရန် ကောင်တာများ
   const [isSuccess, setIsSuccess] = useState(false);
   const [successData, setSuccessData] = useState<BookingResult | null>(null);
 
-  // ✅ ၂။ အချိန် ၁၀ မိနစ်ပြည့်သွားခြင်း ရှိ/မရှိ စစ်ဆေးမည့် State
   const [isTimeOut, setIsTimeOut] = useState(false);
+
+  useEffect(() => {
+    if (urlQuantity && urlQuantity > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setQuantity(urlQuantity);
+    }
+  }, [urlQuantity]);
 
   useEffect(() => {
     if (!id) return;
@@ -83,7 +95,9 @@ function BookingFormContent() {
         if (!res.ok) throw new Error("Failed to fetch");
         return res.json();
       })
+      
       .then((res) => {
+        console.log("=== API JSON DATA ===", res);
         const actualData = res.data !== undefined ? res.data : res;
         setEvent(actualData);
       })
@@ -94,7 +108,6 @@ function BookingFormContent() {
       .finally(() => setPageLoading(false));
   }, [id]);
 
-  // ✅ ၃။ အချိန်ပြည့်သွားပါက လုပ်ဆောင်မည့် Function
   const handleTimeout = () => {
     setIsTimeOut(true);
     toast.error("Your ticket hold session has expired! Please try again.", {
@@ -105,11 +118,15 @@ function BookingFormContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 💡 အချိန်ကုန်သွားရင် Form Submit လုပ်ခွင့်မပြုပါ
     if (isTimeOut) return;
 
     const currentEventId = Array.isArray(id) ? id[0] : id;
     if (!customerName.trim() || !currentEventId) return;
+
+    if (quantity > availableTickets) {
+      toast.error(`Only ${availableTickets} tickets are available left.`);
+      return;
+    }
 
     setLoading(true);
     const toastId = toast.loading("Booking Submission...");
@@ -130,7 +147,6 @@ function BookingFormContent() {
       if (result.status === "Success" || res.status === 200) {
         toast.success("Booking submitted successfully!", { id: toastId });
 
-        // Math.random() ကို Event Handler ထဲတွင် သီးသန့် ကွဲထွက်အောင် Variable အရင်ဆောက်ခြင်း
         const fallbackId = generateFallbackTicketId();
         const calculatedAmount = currentPrice * quantity;
 
@@ -158,10 +174,17 @@ function BookingFormContent() {
     }
   };
 
+  // 🛠️ Safety Fallback Values Computation
   const currentPrice = event?.ticketPrice ?? urlTicketPrice ?? 0;
-  const displayEventTitle = event ? event.title : urlEventName;
-  const availableTickets = event ? event.availableTickets : 0;
+  
+  // Title for fallback
+  const displayEventTitle = event?.title || event?.name || urlEventName || "Loading Event...";
+
+  const availableTickets = event?.availableTickets ?? event?.available_tickets ?? 0;
+  
   const isSoldOut = event !== null && availableTickets <= 0;
+
+  console.log("Booking Form State:", { displayEventTitle, currentPrice, availableTickets, isSoldOut });
 
   // ==========================================
   // ဝယ်ယူမှု အောင်မြင်သွားချိန်တွင် ပေါ်လာမည့် UI
@@ -230,14 +253,14 @@ function BookingFormContent() {
                 toast.error("Failed to generate PDF.", { id: toastId });
               }
             }}
-            className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2 shadow-sm"
+            className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2 shadow-sm cursor-pointer"
           >
             <Download className="w-4 h-4" /> Download Ticket (PDF)
           </Button>
           <Button
             variant="outline"
             onClick={() => router.push("/")}
-            className="w-full h-11 border-zinc-200 text-zinc-700 dark:border-zinc-800 dark:text-zinc-300"
+            className="w-full h-11 border-zinc-200 text-zinc-700 dark:border-zinc-800 dark:text-zinc-300 cursor-pointer"
           >
             Back to Home
           </Button>
@@ -273,7 +296,7 @@ function BookingFormContent() {
           <CardDescription className="text-sm text-zinc-500 dark:text-zinc-400">
             Event Name:{" "}
             <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-              {displayEventTitle || "Loading..."}
+              {displayEventTitle}
             </span>
           </CardDescription>
         </CardHeader>
@@ -316,15 +339,17 @@ function BookingFormContent() {
                     <span
                       className={`text-xs font-medium px-2 py-0.5 rounded-md ${
                         isSoldOut
-                          ? "bg-red-50 text-red-600"
+                          ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
                           : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
                       }`}
                     >
-                      {event
-                        ? isSoldOut
-                          ? "Sold Out"
-                          : `Available: ${availableTickets} tickets`
-                        : "Loading Stock..."}
+                      {pageLoading ? (
+                        "Loading Stock..."
+                      ) : isSoldOut ? (
+                        "Sold Out"
+                      ) : (
+                        `Available: ${availableTickets} tickets`
+                      )}
                     </span>
                   )}
                 </div>
@@ -344,11 +369,9 @@ function BookingFormContent() {
                 <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
                   <span>Original Price</span>
                   <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                    <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                      {currentPrice > 0
-                        ? `${currentPrice.toLocaleString()} MMK`
-                        : "--- MMK"}
-                    </span>
+                    {currentPrice > 0
+                      ? `${currentPrice.toLocaleString()} MMK`
+                      : "--- MMK"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center font-semibold text-zinc-900 border-t border-zinc-200/60 pt-2.5 mt-1 dark:text-zinc-100 dark:border-zinc-800">
@@ -371,7 +394,7 @@ function BookingFormContent() {
             <Button
               type="button"
               onClick={() => window.location.reload()}
-              className="w-full h-11 bg-zinc-900 hover:bg-zinc-800 text-white font-medium shadow-sm gap-2 active:scale-[0.98] transition-all pointer-events-auto"
+              className="w-full h-11 bg-zinc-900 hover:bg-zinc-800 text-white font-medium shadow-sm gap-2 active:scale-[0.98] transition-all pointer-events-auto cursor-pointer"
             >
               <RefreshCw className="w-4 h-4" /> Restart Booking Process
             </Button>
@@ -379,7 +402,7 @@ function BookingFormContent() {
             <Button
               type="submit"
               form="booking-form"
-              className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm transition-all focus-visible:ring-emerald-500 active:scale-[0.98]"
+              className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm transition-all focus-visible:ring-emerald-500 active:scale-[0.98] cursor-pointer"
               disabled={loading || pageLoading || isSoldOut}
             >
               {loading ? (
@@ -400,6 +423,7 @@ function BookingFormContent() {
   );
 }
 
+// Main Page Component
 export default function BookTicketPage() {
   return (
     <div className="p-6 md:p-12 max-w-md mx-auto space-y-4">
